@@ -40,36 +40,36 @@ while true; do
     gpu_temp2=$(nvidia-smi --query-gpu=temperature.gpu --format=csv,noheader,nounits -i 1 2>> $DEBUG_LOG)
 
     echo "GPU1 temp: $gpu_temp1, GPU2 temp: $gpu_temp2" | tee -a $DEBUG_LOG
-
+ 
+    # Determine the highest GPU temperature
+    max_gpu_temp=$((gpu_temp1 > gpu_temp2 ? gpu_temp1 : gpu_temp2))
+	echo "Max GPU temp: $max_gpu_temp" | tee -a $DEBUG_LOG
+ 
     # Get CPU temperatures using the provided command for sensor IDs 0Eh and 0Fh
     cpu_temp1=$($IPMI_COMMAND sdr type temperature | grep '0Eh' | awk -F '|' '{print $5}' | awk '{print $1}' 2>> $DEBUG_LOG)
     cpu_temp2=$($IPMI_COMMAND sdr type temperature | grep '0Fh' | awk -F '|' '{print $5}' | awk '{print $1}' 2>> $DEBUG_LOG)
 
     echo "CPU0 temp: $cpu_temp1, CPU1 temp: $cpu_temp2" | tee -a $DEBUG_LOG
 
-    # Determine the highest GPU temperature
-    max_gpu_temp=$((gpu_temp1 > gpu_temp2 ? gpu_temp1 : gpu_temp2))
-
-    echo "Max GPU temp: $max_gpu_temp" | tee -a $DEBUG_LOG
+    # Determine the highest CPU temperature
+    max_cpu_temp=$((cpu_temp1 > cpu_temp2 ? cpu_temp1 : cpu_temp2))
+    echo "Max CPU temp: $max_gpu_temp" | tee -a $DEBUG_LOG
+	
+	max_temp=$((max_gpu_temp > max_cpu_temp ? max_gpu_temp : max_cpu_temp))
 
     # Determine the appropriate fan speed based on GPU temperature thresholds
-    if [ "$max_gpu_temp" -lt 55 ]; then
-        fan_speed=$VERY_LOW_FAN_SPEED
-    elif [ "$max_gpu_temp" -lt 65 ]; then
-        fan_speed=$LOW_FAN_SPEED
-    elif [ "$max_gpu_temp" -lt 75 ]; then
-        fan_speed=$MID_FAN_SPEED
-    elif [ "$max_gpu_temp" -lt 85 ]; then
-        fan_speed=$HIGH_FAN_SPEED
-    else
-        echo "ERROR: GPU temperature exceeded 85°C. Activating emergency override!" | systemd-cat -p err
-        fan_speed=80
+	m=$(echo "scale=2; ($MAX_FAN_SPEED - $MIN_FAN_SPEED)/($TEMP_HIGH_THRESHOLD - $TEMP_LOW_THRESHOLD)" | bc)
+	c=$(echo "$MIN_FAN_SPEED - $m * $TEMP_LOW_THRESHOLD" | bc)
+	fan_speed=$(echo "$m * $max_temp + $c" | bc)
+	fan_speed=${fan_speed%.*}  # Strip decimals to get an integer (optional, for hardware compatibility)
+	
+	if [ "$fan_speed" -lt "$MIN_FAN_SPEED" ]; then
+        fan_speed=$MIN_FAN_SPEED
     fi
-
-    # Cap fan speed at 65% unless in emergency override
-    if [ "$fan_speed" -gt 65 ]; then
-        fan_speed=65
-    fi
+	
+	if [ "$fan_speed" -gt "$MAX_FAN_SPEED" ]; then
+		fan_speed=$MAX_FAN_SPEED
+	fi
 
     fan_speed_hex=$(printf '0x%02x' $fan_speed)
 
