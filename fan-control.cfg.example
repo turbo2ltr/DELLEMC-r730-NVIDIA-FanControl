@@ -1,0 +1,13 @@
+# DELL IPMI Configuration
+IPMI_HOST=10.0.0.x
+IPMI_USER=[your username]
+IPMI_PASSWORD=[your password]
+IPMI_YKEY=0000000000000000000000000000000000000000
+
+# Lower fan speed/temp C point
+MIN_FAN_SPEED=13
+TEMP_LOW_THRESHOLD=45
+
+# Upper fan speed/temp C point
+MAX_FAN_SPEED=100
+TEMP_HIGH_THRESHOLD=70
