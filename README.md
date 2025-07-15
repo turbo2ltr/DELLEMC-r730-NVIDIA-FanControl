@@ -1,3 +1,13 @@
+This is a fork in disarray.  
+The big change is it needs SMNP.  For whatever reason, getting CPU temps from IPMI was very slow on my R730.  Changing to SMNP returnes immediately.  You may need to confirm the SMNP address is correct for your hardware.
+The other change is in the math. Even though it got both GPU and CPU temps, the original only looked at GPU temp for the fan speed calculation.  It now looks at both CPU and GPU and picks the highest temperature to calculate the  fan speed.  
+In addtion, the way the speed is calcualted uses a linear function based on two temp/fan speed points in the configuration instead of the tiered lookup table. This will cause the speeds to ramp up/down a little more smoothly based on temps.
+The log output has been cleaned up/simplified a bit.
+The downside to this script in general is if it crashes, you are left with no fan speed control and your hardware may be damaged. Care should be take to ensure it doesn't crash or if it does that the fans default to a faster state.
+
+> [!Important]
+> I take no responsibility if this script crashes and burns your house down.
+
 # Dell R730 ESXi NVIDIA VM Fan Control
 
 > [!Important]
